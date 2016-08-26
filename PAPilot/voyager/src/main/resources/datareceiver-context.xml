@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:jms="http://www.springframework.org/schema/jms"
+	xmlns:p="http://www.springframework.org/schema/p" xmlns:context="http://www.springframework.org/schema/context"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans
+	 http://www.springframework.org/schema/beans/spring-beans-4.1.xsd
+	 http://www.springframework.org/schema/jms
+	 http://www.springframework.org/schema/jms/spring-jms-4.1.xsd
+	 http://www.springframework.org/schema/context 
+	 http://www.springframework.org/schema/context/spring-context-4.1.xsd">
+
+
+	<!-- Load properties of both Agent and common component -->
+	<bean id="propertyPlaceholderConfigurer"
+		class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
+		<property name="ignoreResourceNotFound" value="true" />
+		<property name="locations">
+			<list>
+				<value>classpath:datareceiver.properties</value>
+			</list>
+		</property>
+	</bean>
+
+
+	<!-- Data base Connection -->
+	<bean id="dbConnection" class="com.novartis.voyager.aws.DBConnection">
+		<property name="dataSource" ref="dbDataSource"></property>
+	</bean>
+
+	<!-- DataSource Bean Implementation -->
+	<bean id="dbDataSource" class="org.springframework.jndi.JndiObjectFactoryBean">
+		<property name="jndiName" value="${jndiname}" />
+	</bean>
+	
+
+		<!-- AWS Credentials -->
+	<bean id="credentials" class="com.amazonaws.auth.DefaultAWSCredentialsProviderChain" />
+
+	<!-- Amazon Client Configuration -->
+	<bean id="s3clientConfig" class="com.amazonaws.ClientConfiguration">
+		<property name="maxConnections" value="${aws.maxConnectionsForS3}" />
+<!-- 	   	<property name="proxyHost" value="86.117.158.148"/>
+		<property name="proxyPort" value="2011"/>  -->
+	</bean>
+
+	<!-- S3 Client bean -->
+	<bean id="s3Client" class="com.amazonaws.services.s3.AmazonS3Client">
+		<constructor-arg ref="credentials" />
+		<constructor-arg ref="s3clientConfig" />
+	</bean>
+
+	<!-- Bean to put object in S3 or fetch object from S3 -->
+	<bean id="s3RepositoryService" class="com.novartis.voyager.aws.s3.S3RepositoryService"
+		scope="prototype">
+		<property name="s3Client" ref="s3Client"/>
+		<property name="keyGenerator" ref="keyGenerator"></property>
+		<property name="regionName" value="${aws.voyager.region}"></property>
+		<property name="bucketName" value="${aws.voyager.bucket}"></property>
+		<property name="kmsId" value="${kms.cmk.id}"></property>
+	</bean>
+	
+	<bean id="keyGenerator" class="com.novartis.voyager.aws.uuid.KeyGenerator">
+		<property name="nodeIdentifier" ref="nodeIdentifier" />
+	</bean>
+	
+	<bean id="nodeIdentifier" class="com.novartis.voyager.aws.uuid.NodeIdentifier">
+		<property name="connectionPool" ref="dbConnection" />
+	</bean>
+
+	<!-- Start : Added By Govind -->
+		<bean id="striivDAO" class="com.novartis.voyager.dao.StriivDeviceDAO">
+			<property name="connectionPool" ref="dbConnection" />
+		</bean>
+		
+		<bean id="activGraphDAO" class="com.novartis.voyager.dao.ActiGraphDeviceDAO">
+			<property name="connectionPool" ref="dbConnection" />
+		</bean>
+		
+	
+	<!-- End  -->
+	
+	<bean id="dataProcessor" class="com.novartis.voyager.transport.DataProcessor">
+		<property name="striivDAO" ref="striivDAO" />
+		<property name="activGraphDAO" ref="activGraphDAO" />
+		<property name="s3RepositoryService" ref="s3RepositoryService" />
+		<property name="actigraphFolder" value="${s3.actigraph.folder}"></property>
+		<property name="striivFolder" value="${s3.striiv.folder}"></property>
+	</bean>
+
+</beans>
+
