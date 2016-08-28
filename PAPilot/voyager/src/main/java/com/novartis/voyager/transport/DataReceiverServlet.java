@@ -21,7 +21,7 @@ import com.novartis.voyager.common.constants.CommonConstants;
 import com.novartis.voyager.util.CommonUtil;
 
 /**
- * Servlet implementation class DataReceiver for voyager. Test.
+ * Servlet implementation class DataReceiver for voyager. Test1.
  */
 public class DataReceiverServlet extends HttpServlet {
 	private static final long serialVersionUID = 1L;
